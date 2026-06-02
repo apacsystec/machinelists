@@ -19,14 +19,57 @@
     <div class="hero-label">MACHINE DATABASE</div>
     <h1 class="hero-title">Find Your<br><em>Machine</em></h1>
     <p class="hero-sub">Search by Type, Article No., S/N, or Power</p>
+
+    <!-- SEARCH BAR -->
     <div class="search-bar">
-      <input type="text" id="searchInput" class="search-input" placeholder="e.g.  WAVE 224  /  A08581  /  220V" autocomplete="off"/>
+      <input type="text" id="searchInput" class="search-input"
+        placeholder="e.g.  WAVE 224  /  A08581  /  220V" autocomplete="off"/>
       <button class="search-btn" id="searchBtn">
-        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+          <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+        </svg>
         SEARCH
       </button>
     </div>
-    <div class="search-hint" id="searchHint">กด Enter หรือคลิก SEARCH เพื่อค้นหา</div>
+
+    <!-- SCAN BUTTONS -->
+    <div class="scan-row">
+      <button class="scan-btn" id="scanCameraBtn">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+          <circle cx="12" cy="13" r="4"/>
+        </svg>
+        สแกนด้วยกล้อง
+      </button>
+      <button class="scan-btn" id="scanFileBtn">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+        </svg>
+        อัปโหลดรูป
+      </button>
+      <input type="file" id="fileInput" accept="image/*" style="display:none"/>
+    </div>
+
+    <div class="search-hint" id="searchHint">กด Enter, คลิก SEARCH หรือสแกน Data Matrix</div>
+
+    <!-- CAMERA MODAL -->
+    <div class="scan-modal" id="scanModal" style="display:none">
+      <div class="scan-modal-inner">
+        <div class="scan-modal-header">
+          <span style="font-size:0.85rem;font-weight:700">สแกน Data Matrix</span>
+          <button class="scan-close" id="closeScan">✕</button>
+        </div>
+        <div class="scan-viewport">
+          <video id="scanVideo" autoplay playsinline muted></video>
+          <div class="scan-overlay">
+            <div class="scan-frame"></div>
+            <div class="scan-hint-text">ส่องกล้องไปที่ Data Matrix บน Label</div>
+          </div>
+        </div>
+        <div class="scan-status" id="scanStatus">กำลังเปิดกล้อง...</div>
+      </div>
+    </div>
   </section>
 
   <section class="results-section" id="resultsSection" style="display:none">
@@ -53,8 +96,11 @@
     </div>
   </section>
 
+  <!-- ZXing library for Data Matrix scanning -->
+  <script src="https://unpkg.com/@zxing/library@0.19.1/umd/index.min.js"></script>
   <script src="api.js"></script>
   <script src="tree.js"></script>
+  <script src="scanner.js"></script>
   <script src="search.js"></script>
 </body>
 </html>
