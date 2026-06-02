@@ -67,7 +67,6 @@ function renderSets(container, sets, opts = {}) {
     }
 
     html += `
-          ${onDelete ? `<div style="padding:0.5rem 1.25rem 0.75rem 2.5rem"><button class="btn-delete" style="font-size:0.65rem" onclick="handleDeleteSet('${s.id}',this)">DELETE SET</button></div>` : ""}
         </div>
       </div>`;
   });

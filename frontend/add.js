@@ -53,7 +53,10 @@ createSetBtn.addEventListener("click", async () => {
 
     // แสดง step 2
     setLabel.textContent = `${set.set_no} — PARTS`;
-    setBadge.innerHTML = `<span style="font-family:var(--mono);font-size:0.8rem;color:var(--accent)">${set.set_no}</span> <span style="font-family:var(--mono);font-size:0.8rem;color:var(--text-dim)">${set.machine_type}</span>`;
+    setBadge.innerHTML = `
+      <span style="font-family:var(--mono);font-size:0.8rem;color:var(--accent)">${set.set_no}</span>
+      <span style="font-family:var(--mono);font-size:0.8rem;color:var(--text-dim)">${set.machine_type}</span>
+      <button class="btn-delete" style="margin-left:auto;font-size:0.65rem" onclick="deleteCurrentSet()">DELETE SET</button>`;
     step2Card.style.display = "block";
     step2Card.scrollIntoView({ behavior: "smooth" });
     renderPartsList();
@@ -111,13 +114,43 @@ function renderPartsList() {
     return;
   }
   partsList.innerHTML = currentParts.map((p, i) => `
-    <div class="recent-item" style="margin-bottom:0">
+    <div class="recent-item" style="margin-bottom:0" id="prow-${p.id}">
       <div>
         <span style="font-family:var(--mono);font-size:0.7rem;color:var(--text-xdim)">Part ${i + 1}</span>
         <span class="recent-name" style="margin-left:0.75rem">${p.type} - ${p.serial_no}</span>
+        <span class="recent-meta" style="margin-left:0.5rem">${p.article_no} / ${p.power}</span>
       </div>
-      <span class="recent-meta">${p.article_no} / ${p.power}</span>
+      <button class="btn-delete" style="font-size:0.65rem;flex-shrink:0"
+        onclick="deletePartInline('${p.id}', this)">DELETE</button>
     </div>`).join("");
+}
+
+async function deletePartInline(partId, btn) {
+  if (!confirm("ลบ Part นี้ใช่ไหม?")) return;
+  btn.disabled = true;
+  try {
+    await Api.deletePart(currentSetId, partId);
+    currentParts = currentParts.filter(p => p.id !== partId);
+    renderPartsList();
+    loadRecent();
+  } catch (e) {
+    alert("Error: " + e.message);
+    btn.disabled = false;
+  }
+}
+
+async function deleteCurrentSet() {
+  if (!confirm("ลบ Set นี้และ Parts ทั้งหมดใช่ไหม?")) return;
+  try {
+    await Api.deleteSet(currentSetId);
+    currentSetId = null;
+    currentParts = [];
+    step2Card.style.display = "none";
+    setStep1Status("✓ Set deleted", "success");
+    loadRecent();
+  } catch (e) {
+    alert("Error: " + e.message);
+  }
 }
 
 function clearPartForm() {
