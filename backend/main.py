@@ -163,7 +163,7 @@ async def delete_part(set_id: str, part_id: str):
     return None
 
 # ═══════════════════════════════════════════════════════════════
-# SEARCH — ค้นหาจาก Part attributes
+# SEARCH — ค้นหาจาก Set No., Machine Type และ Part attributes
 # ═══════════════════════════════════════════════════════════════
 
 @app.get("/search/{query}")
@@ -174,19 +174,34 @@ async def search(query: str):
     sets_docs = db.collection(SETS_COL).stream()
     results = []
     for set_doc in sets_docs:
+        s_data = set_doc.to_dict()
+        set_searchable = " ".join([
+            s_data.get("set_no", ""),
+            s_data.get("machine_type", ""),
+        ]).lower()
+
         machines = list(set_doc.reference.collection("machines").stream())
+        all_parts = []
         matched_parts = []
+
         for m_doc in machines:
             parts = m_doc.reference.collection("parts").stream()
             for p_doc in parts:
                 p = part_to_dict(p_doc)
-                searchable = " ".join([
+                all_parts.append(p)
+                part_searchable = " ".join([
                     p.get("type",""), p.get("article_no",""),
                     p.get("serial_no",""), p.get("power",""),
                 ]).lower()
-                if q in searchable:
+                if q in part_searchable:
                     matched_parts.append(p)
-        if matched_parts:
+
+        # ถ้า query ตรงกับ Set No. หรือ Machine Type → แสดง parts ทั้งหมด
+        if q in set_searchable:
+            s = set_to_dict(set_doc)
+            s["matched_parts"] = all_parts
+            results.append(s)
+        elif matched_parts:
             s = set_to_dict(set_doc)
             s["matched_parts"] = matched_parts
             results.append(s)

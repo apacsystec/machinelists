@@ -117,16 +117,30 @@ async function handleDeletePart(setId, partId, btn) {
 }
 
 async function handleEditPart(setId, partId) {
+  // ดึงข้อมูลเดิมจาก DOM (attr-val ที่แสดงอยู่แล้ว)
+  const attrEl = document.getElementById(`pattr-${setId}-${partId}`);
+  const vals = attrEl ? attrEl.querySelectorAll(".attr-val") : [];
+  const existing = {
+    type:       vals[0]?.textContent || "",
+    article_no: vals[1]?.textContent || "",
+    serial_no:  vals[2]?.textContent || "",
+    power:      vals[3]?.textContent || "",
+  };
+
   const overlay = document.createElement("div");
   overlay.className = "modal-overlay";
   overlay.innerHTML = `
     <div class="modal">
       <div class="modal-title">Edit Part</div>
       <div class="modal-grid">
-        <div class="field-group"><label class="field-label">Type</label><input class="field-input" id="ep-type"></div>
-        <div class="field-group"><label class="field-label">Article No.</label><input class="field-input" id="ep-article"></div>
-        <div class="field-group"><label class="field-label">S/N</label><input class="field-input" id="ep-sn"></div>
-        <div class="field-group"><label class="field-label">Power</label><input class="field-input" id="ep-power"></div>
+        <div class="field-group"><label class="field-label">Type</label>
+          <input class="field-input" id="ep-type" value="${existing.type}"></div>
+        <div class="field-group"><label class="field-label">Article No.</label>
+          <input class="field-input" id="ep-article" value="${existing.article_no}"></div>
+        <div class="field-group"><label class="field-label">S/N</label>
+          <input class="field-input" id="ep-sn" value="${existing.serial_no}"></div>
+        <div class="field-group"><label class="field-label">Power</label>
+          <input class="field-input" id="ep-power" value="${existing.power}"></div>
       </div>
       <div class="modal-actions">
         <button class="btn-secondary" id="cancelEdit">CANCEL</button>
@@ -142,10 +156,10 @@ async function handleEditPart(setId, partId) {
     btn.disabled = true; btn.textContent = "Saving...";
     try {
       await Api.updatePart(setId, partId, {
-        type: overlay.querySelector("#ep-type").value,
+        type:       overlay.querySelector("#ep-type").value,
         article_no: overlay.querySelector("#ep-article").value,
-        serial_no: overlay.querySelector("#ep-sn").value,
-        power: overlay.querySelector("#ep-power").value,
+        serial_no:  overlay.querySelector("#ep-sn").value,
+        power:      overlay.querySelector("#ep-power").value,
       });
       status.className = "modal-status success"; status.textContent = "✓ Saved!";
       setTimeout(() => { overlay.remove(); location.reload(); }, 800);
