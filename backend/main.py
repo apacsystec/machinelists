@@ -2,10 +2,12 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from firebase_admin import firestore
 from firebase_config import db
-from models import MachineSet, MachineSetUpdate
+from models import MachineIn, PartIn, PartUpdate
 from typing import List
+import re
+from datetime import datetime
 
-app = FastAPI(title="Machine Registry API", version="1.0.0")
+app = FastAPI(title="Machine Registry API", version="2.0.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -15,104 +17,185 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-COLLECTION = "machine_sets"
+SETS_COL = "machine_sets"
 
+# ── helpers ──────────────────────────────────────────────────
 
-def doc_to_dict(doc) -> dict:
-    data = doc.to_dict()
-    data["id"] = doc.id
-    # สร้าง display_name = Type - S/N
-    data["display_name"] = f"{data.get('type', '')} - {data.get('serial_no', '')}"
-    return data
+def next_set_no(existing: list[str]) -> str:
+    nums = []
+    for s in existing:
+        m = re.match(r"SET-(\d+)", s)
+        if m:
+            nums.append(int(m.group(1)))
+    n = max(nums) + 1 if nums else 1
+    return f"SET-{n:03d}"
 
+def part_to_dict(doc) -> dict:
+    d = doc.to_dict()
+    d["id"] = doc.id
+    d["display_name"] = f"{d.get('type','')} - {d.get('serial_no','')}"
+    return d
 
-# ─────────────────────────────────────────────
-# CREATE
-# ─────────────────────────────────────────────
-@app.post("/machines", status_code=201)
-async def create_machine(machine: MachineSet):
-    data = machine.model_dump()
-    ref = db.collection(COLLECTION).add(data)
-    doc = db.collection(COLLECTION).document(ref[1].id).get()
-    return doc_to_dict(doc)
+def machine_to_dict(doc) -> dict:
+    d = doc.to_dict()
+    d["id"] = doc.id
+    return d
 
+def set_to_dict(doc) -> dict:
+    d = doc.to_dict()
+    d["id"] = doc.id
+    return d
 
-# ─────────────────────────────────────────────
-# READ ALL
-# ─────────────────────────────────────────────
-@app.get("/machines")
-async def get_all_machines():
-    docs = db.collection(COLLECTION).stream()
-    return [doc_to_dict(d) for d in docs]
+# ═══════════════════════════════════════════════════════════════
+# MACHINE SETS
+# ═══════════════════════════════════════════════════════════════
 
+@app.get("/sets")
+async def get_all_sets():
+    docs = db.collection(SETS_COL).order_by("created_at").stream()
+    result = []
+    for doc in docs:
+        s = set_to_dict(doc)
+        # ดึง machines
+        machines = []
+        m_docs = db.collection(SETS_COL).document(doc.id).collection("machines").stream()
+        for m_doc in m_docs:
+            machine = machine_to_dict(m_doc)
+            # ดึง parts
+            parts = []
+            p_docs = (db.collection(SETS_COL).document(doc.id)
+                      .collection("machines").document(m_doc.id)
+                      .collection("parts").stream())
+            for p_doc in p_docs:
+                parts.append(part_to_dict(p_doc))
+            machine["parts"] = parts
+            machines.append(machine)
+        s["machines"] = machines
+        result.append(s)
+    return result
 
-# ─────────────────────────────────────────────
-# READ ONE
-# ─────────────────────────────────────────────
-@app.get("/machines/{machine_id}")
-async def get_machine(machine_id: str):
-    doc = db.collection(COLLECTION).document(machine_id).get()
-    if not doc.exists:
+@app.post("/sets", status_code=201)
+async def create_set(machine: MachineIn):
+    # Auto generate SET-XXX
+    existing = [d.id for d in db.collection(SETS_COL).stream()]
+    set_no = next_set_no(existing)
+    set_ref = db.collection(SETS_COL).document(set_no)
+    set_ref.set({
+        "set_no": set_no,
+        "machine_type": machine.machine_type,
+        "created_at": firestore.SERVER_TIMESTAMP,
+    })
+    return {"id": set_no, "set_no": set_no, "machine_type": machine.machine_type}
+
+@app.delete("/sets/{set_id}", status_code=204)
+async def delete_set(set_id: str):
+    ref = db.collection(SETS_COL).document(set_id)
+    if not ref.get().exists:
+        raise HTTPException(status_code=404, detail="Set not found")
+    # ลบ sub-collections
+    for m in ref.collection("machines").stream():
+        for p in ref.collection("machines").document(m.id).collection("parts").stream():
+            ref.collection("machines").document(m.id).collection("parts").document(p.id).delete()
+        ref.collection("machines").document(m.id).delete()
+    ref.delete()
+    return None
+
+# ═══════════════════════════════════════════════════════════════
+# PARTS
+# ═══════════════════════════════════════════════════════════════
+
+@app.get("/sets/{set_id}/parts")
+async def get_parts(set_id: str):
+    set_ref = db.collection(SETS_COL).document(set_id)
+    if not set_ref.get().exists:
+        raise HTTPException(status_code=404, detail="Set not found")
+    # machine เดียวต่อ set
+    machines = list(set_ref.collection("machines").stream())
+    if not machines:
+        return []
+    m_id = machines[0].id
+    parts = set_ref.collection("machines").document(m_id).collection("parts").stream()
+    return [part_to_dict(p) for p in parts]
+
+@app.post("/sets/{set_id}/parts", status_code=201)
+async def add_part(set_id: str, part: PartIn):
+    set_ref = db.collection(SETS_COL).document(set_id)
+    if not set_ref.get().exists:
+        raise HTTPException(status_code=404, detail="Set not found")
+    # หรือสร้าง machine node ถ้ายังไม่มี
+    machines = list(set_ref.collection("machines").stream())
+    if machines:
+        m_id = machines[0].id
+    else:
+        set_data = set_ref.get().to_dict()
+        m_ref = set_ref.collection("machines").add({"type": set_data.get("machine_type","")})
+        m_id = m_ref[1].id
+    data = part.model_dump()
+    p_ref = set_ref.collection("machines").document(m_id).collection("parts").add(data)
+    p_doc = set_ref.collection("machines").document(m_id).collection("parts").document(p_ref[1].id).get()
+    return part_to_dict(p_doc)
+
+@app.put("/sets/{set_id}/parts/{part_id}")
+async def update_part(set_id: str, part_id: str, part: PartUpdate):
+    set_ref = db.collection(SETS_COL).document(set_id)
+    machines = list(set_ref.collection("machines").stream())
+    if not machines:
         raise HTTPException(status_code=404, detail="Machine not found")
-    return doc_to_dict(doc)
+    m_id = machines[0].id
+    p_ref = set_ref.collection("machines").document(m_id).collection("parts").document(part_id)
+    if not p_ref.get().exists:
+        raise HTTPException(status_code=404, detail="Part not found")
+    update_data = {k: v for k, v in part.model_dump().items() if v is not None}
+    p_ref.update(update_data)
+    return part_to_dict(p_ref.get())
 
+@app.delete("/sets/{set_id}/parts/{part_id}", status_code=204)
+async def delete_part(set_id: str, part_id: str):
+    set_ref = db.collection(SETS_COL).document(set_id)
+    machines = list(set_ref.collection("machines").stream())
+    if not machines:
+        raise HTTPException(status_code=404, detail="Machine not found")
+    m_id = machines[0].id
+    p_ref = set_ref.collection("machines").document(m_id).collection("parts").document(part_id)
+    if not p_ref.get().exists:
+        raise HTTPException(status_code=404, detail="Part not found")
+    p_ref.delete()
+    return None
 
-# ─────────────────────────────────────────────
-# SEARCH — full-text search across all fields (client-side filter)
-# Firestore ไม่มี native full-text search จึงดึงทั้งหมดแล้ว filter ฝั่ง backend
-# ─────────────────────────────────────────────
-@app.get("/machines/search/{query}")
-async def search_machines(query: str):
+# ═══════════════════════════════════════════════════════════════
+# SEARCH — ค้นหาจาก Part attributes
+# ═══════════════════════════════════════════════════════════════
+
+@app.get("/search/{query}")
+async def search(query: str):
     q = query.strip().lower()
     if not q:
         return []
-
-    docs = db.collection(COLLECTION).stream()
+    sets_docs = db.collection(SETS_COL).stream()
     results = []
-    for doc in docs:
-        d = doc_to_dict(doc)
-        # ค้นหาใน type, article_no, serial_no, power (case-insensitive)
-        searchable = " ".join([
-            d.get("type", ""),
-            d.get("article_no", ""),
-            d.get("serial_no", ""),
-            d.get("power", ""),
-        ]).lower()
-        if q in searchable:
-            results.append(d)
-
+    for set_doc in sets_docs:
+        machines = list(set_doc.reference.collection("machines").stream())
+        matched_parts = []
+        for m_doc in machines:
+            parts = m_doc.reference.collection("parts").stream()
+            for p_doc in parts:
+                p = part_to_dict(p_doc)
+                searchable = " ".join([
+                    p.get("type",""), p.get("article_no",""),
+                    p.get("serial_no",""), p.get("power",""),
+                ]).lower()
+                if q in searchable:
+                    matched_parts.append(p)
+        if matched_parts:
+            s = set_to_dict(set_doc)
+            s["matched_parts"] = matched_parts
+            results.append(s)
     return results
 
+# ═══════════════════════════════════════════════════════════════
+# HEALTH
+# ═══════════════════════════════════════════════════════════════
 
-# ─────────────────────────────────────────────
-# UPDATE
-# ─────────────────────────────────────────────
-@app.put("/machines/{machine_id}")
-async def update_machine(machine_id: str, machine: MachineSetUpdate):
-    doc_ref = db.collection(COLLECTION).document(machine_id)
-    if not doc_ref.get().exists:
-        raise HTTPException(status_code=404, detail="Machine not found")
-    update_data = {k: v for k, v in machine.model_dump().items() if v is not None}
-    doc_ref.update(update_data)
-    updated = doc_ref.get()
-    return doc_to_dict(updated)
-
-
-# ─────────────────────────────────────────────
-# DELETE
-# ─────────────────────────────────────────────
-@app.delete("/machines/{machine_id}", status_code=204)
-async def delete_machine(machine_id: str):
-    doc_ref = db.collection(COLLECTION).document(machine_id)
-    if not doc_ref.get().exists:
-        raise HTTPException(status_code=404, detail="Machine not found")
-    doc_ref.delete()
-    return None
-
-
-# ─────────────────────────────────────────────
-# HEALTH CHECK
-# ─────────────────────────────────────────────
 @app.get("/health")
 async def health():
-    return {"status": "ok", "service": "Machine Registry API"}
+    return {"status": "ok", "service": "Machine Registry API v2"}

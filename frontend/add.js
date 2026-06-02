@@ -1,95 +1,135 @@
-// ============================================================
-// add.js — Add Machine page logic (add.html)
-// ============================================================
+// add.js v2
+const machineTypeInput = document.getElementById("machineType");
+const createSetBtn     = document.getElementById("createSetBtn");
+const step1Status      = document.getElementById("step1Status");
+const step2Card        = document.getElementById("step2Card");
+const setLabel         = document.getElementById("setLabel");
+const setBadge         = document.getElementById("setBadge");
+const partsList        = document.getElementById("partsList");
+const addPartBtn       = document.getElementById("addPartBtn");
+const doneBtn          = document.getElementById("doneBtn");
+const partStatus       = document.getElementById("partStatus");
+const recentList       = document.getElementById("recentList");
 
-const typeInput    = document.getElementById("type");
-const articleInput = document.getElementById("articleNo");
-const snInput      = document.getElementById("serialNo");
-const powerInput   = document.getElementById("power");
-const previewName  = document.getElementById("previewName");
-const submitBtn    = document.getElementById("submitBtn");
-const submitLabel  = document.getElementById("submitLabel");
-const resetBtn     = document.getElementById("resetBtn");
-const statusMsg    = document.getElementById("statusMsg");
-const recentList   = document.getElementById("recentList");
+let currentSetId = null;
+let currentParts = [];
 
-// ── Live preview ─────────────────────────────────────────────
-function updatePreview() {
-  const t  = typeInput.value.trim() || "—";
-  const sn = snInput.value.trim()   || "—";
-  previewName.textContent = `${t} - ${sn}`;
-}
-
-[typeInput, snInput].forEach(el => el.addEventListener("input", updatePreview));
-
-// ── Load recent machines ──────────────────────────────────────
+// ── Load recent ───────────────────────────────────────────────
 async function loadRecent() {
   try {
-    const machines = await Api.getAllMachines();
-    const recent = machines.slice(-5).reverse(); // แสดง 5 ล่าสุด
+    const sets = await Api.getAllSets();
+    const recent = sets.slice(-5).reverse();
     if (recent.length === 0) {
-      recentList.innerHTML = `<div class="loading-row" style="font-size:0.78rem">No machines yet.</div>`;
+      recentList.innerHTML = `<div class="loading-row" style="font-size:0.78rem">No machine sets yet.</div>`;
       return;
     }
-    recentList.innerHTML = recent.map(m => `
-      <div class="recent-item">
-        <span class="recent-name">${m.type || "—"} - ${m.serial_no || "—"}</span>
-        <span class="recent-meta">${m.article_no || ""}</span>
-      </div>`).join("");
+    recentList.innerHTML = recent.map(s => {
+      const partCount = s.machines?.flatMap(m => m.parts || []).length || 0;
+      return `<div class="recent-item">
+        <span class="recent-name" style="color:var(--accent)">${s.set_no}</span>
+        <span class="recent-meta">${s.machine_type} — ${partCount} part${partCount !== 1 ? "s" : ""}</span>
+      </div>`;
+    }).join("");
   } catch {
-    recentList.innerHTML = `<div class="loading-row" style="color:var(--danger);font-size:0.78rem">
-      Cannot connect to backend.
-    </div>`;
+    recentList.innerHTML = `<div class="loading-row" style="color:var(--danger);font-size:0.78rem">Cannot connect to backend.</div>`;
   }
 }
 
 loadRecent();
 
-// ── Submit ────────────────────────────────────────────────────
-submitBtn.addEventListener("click", async () => {
-  const type       = typeInput.value.trim();
-  const article_no = articleInput.value.trim();
-  const serial_no  = snInput.value.trim();
-  const power      = powerInput.value.trim();
+// ── STEP 1: Create Set ────────────────────────────────────────
+createSetBtn.addEventListener("click", async () => {
+  const machineType = machineTypeInput.value.trim();
+  if (!machineType) { setStep1Status("⚠ กรุณากรอก Machine Type", "error"); return; }
 
-  // Validation
-  if (!type || !article_no || !serial_no || !power) {
-    setStatus("⚠ กรุณากรอกข้อมูลให้ครบทุกช่อง", "error");
-    return;
-  }
-
-  submitBtn.disabled = true;
-  submitLabel.textContent = "Adding...";
-  setStatus("", "");
+  createSetBtn.disabled = true;
+  createSetBtn.textContent = "Creating...";
+  setStep1Status("", "");
 
   try {
-    const created = await Api.createMachine({ type, article_no, serial_no, power });
-    setStatus(`✓ Added: ${created.display_name}`, "success");
-    clearForm();
+    const set = await Api.createSet(machineType);
+    currentSetId = set.id;
+    currentParts = [];
+
+    // แสดง step 2
+    setLabel.textContent = `${set.set_no} — PARTS`;
+    setBadge.innerHTML = `<span style="font-family:var(--mono);font-size:0.8rem;color:var(--accent)">${set.set_no}</span> <span style="font-family:var(--mono);font-size:0.8rem;color:var(--text-dim)">${set.machine_type}</span>`;
+    step2Card.style.display = "block";
+    step2Card.scrollIntoView({ behavior: "smooth" });
+    renderPartsList();
+
+    setStep1Status(`✓ Created ${set.set_no}`, "success");
+    createSetBtn.textContent = "CREATE SET →";
+    createSetBtn.disabled = false;
+    machineTypeInput.value = "";
     loadRecent();
   } catch (e) {
-    setStatus("Error: " + e.message, "error");
-  } finally {
-    submitBtn.disabled = false;
-    submitLabel.textContent = "ADD MACHINE";
+    setStep1Status("Error: " + e.message, "error");
+    createSetBtn.disabled = false;
+    createSetBtn.textContent = "CREATE SET →";
   }
 });
 
-// ── Reset ─────────────────────────────────────────────────────
-resetBtn.addEventListener("click", () => {
-  clearForm();
-  setStatus("", "");
+// ── STEP 2: Add Parts ─────────────────────────────────────────
+addPartBtn.addEventListener("click", async () => {
+  const type       = document.getElementById("pType").value.trim();
+  const article_no = document.getElementById("pArticle").value.trim();
+  const serial_no  = document.getElementById("pSN").value.trim();
+  const power      = document.getElementById("pPower").value.trim();
+
+  if (!type || !article_no || !serial_no || !power) {
+    setPartStatus("⚠ กรุณากรอกข้อมูลให้ครบ", "error"); return;
+  }
+
+  addPartBtn.disabled = true;
+  addPartBtn.textContent = "Adding...";
+  setPartStatus("", "");
+
+  try {
+    const part = await Api.addPart(currentSetId, { type, article_no, serial_no, power });
+    currentParts.push(part);
+    renderPartsList();
+    clearPartForm();
+    setPartStatus(`✓ Added: ${part.display_name}`, "success");
+    loadRecent();
+  } catch (e) {
+    setPartStatus("Error: " + e.message, "error");
+  } finally {
+    addPartBtn.disabled = false;
+    addPartBtn.textContent = "ADD PART";
+  }
 });
 
-function clearForm() {
-  typeInput.value = "";
-  articleInput.value = "";
-  snInput.value = "";
-  powerInput.value = "";
-  updatePreview();
+doneBtn.addEventListener("click", () => {
+  window.location.href = "index.html";
+});
+
+// ── Helpers ───────────────────────────────────────────────────
+function renderPartsList() {
+  if (currentParts.length === 0) {
+    partsList.innerHTML = `<div style="font-family:var(--mono);font-size:0.78rem;color:var(--text-xdim);margin-bottom:1rem">ยังไม่มี Parts — เพิ่มด้านล่างได้เลยครับ</div>`;
+    return;
+  }
+  partsList.innerHTML = currentParts.map((p, i) => `
+    <div class="recent-item" style="margin-bottom:0">
+      <div>
+        <span style="font-family:var(--mono);font-size:0.7rem;color:var(--text-xdim)">Part ${i + 1}</span>
+        <span class="recent-name" style="margin-left:0.75rem">${p.type} - ${p.serial_no}</span>
+      </div>
+      <span class="recent-meta">${p.article_no} / ${p.power}</span>
+    </div>`).join("");
 }
 
-function setStatus(msg, type) {
-  statusMsg.textContent = msg;
-  statusMsg.className = `status-msg ${type}`;
+function clearPartForm() {
+  ["pType","pArticle","pSN","pPower"].forEach(id => document.getElementById(id).value = "");
+}
+
+function setStep1Status(msg, type) {
+  step1Status.textContent = msg;
+  step1Status.className = `status-msg ${type}`;
+}
+
+function setPartStatus(msg, type) {
+  partStatus.textContent = msg;
+  partStatus.className = `status-msg ${type}`;
 }

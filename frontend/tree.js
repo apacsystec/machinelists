@@ -1,75 +1,88 @@
-// ============================================================
-// tree.js — Render machines as Tree/Hierarchy view
-// ============================================================
+// tree.js v2 — render Machine Sets with Parts
 
-/**
- * Render an array of machine objects into a tree container element.
- * @param {HTMLElement} container
- * @param {Array} machines
- * @param {Object} opts - { rootLabel, onEdit, onDelete }
- */
-function renderTree(container, machines, opts = {}) {
-  const { rootLabel = "Machine Type", onEdit, onDelete } = opts;
+function renderSets(container, sets, opts = {}) {
+  const { rootLabel = "Machine set No.", onEdit, onDelete } = opts;
 
-  if (!machines || machines.length === 0) {
-    container.innerHTML = `
-      <div class="loading-row" style="justify-content:center;padding:2rem;">
-        No machines to display.
-      </div>`;
+  if (!sets || sets.length === 0) {
+    container.innerHTML = `<div class="tree-container"><div class="loading-row" style="justify-content:center;padding:2rem;">No machine sets found.</div></div>`;
     return;
   }
 
-  let html = `
+  let html = `<div class="tree-container">
     <div class="tree-root-label">
       <span>${rootLabel}</span>
-      <span style="font-family:var(--mono);font-size:0.65rem;color:var(--text-xdim)">
-        ${machines.length} machine${machines.length !== 1 ? "s" : ""}
-      </span>
+      <span style="font-family:var(--mono);font-size:0.65rem;color:var(--text-xdim)">${sets.length} set${sets.length !== 1 ? "s" : ""}</span>
     </div>`;
 
-  machines.forEach((m, i) => {
-    const setLabel = `Machine set ${i + 1}`;
-    const displayName = `${m.type || "—"} - ${m.serial_no || "—"}`;
-    const id = `tree-${m.id || i}`;
+  const parts = opts.parts || null; // สำหรับ search result
+
+  sets.forEach((s) => {
+    const setId = `set-${s.id}`;
+    const partList = parts || (s.matched_parts || s.machines?.flatMap(m => m.parts || []) || []);
 
     html += `
-      <div class="tree-machine" data-id="${m.id}">
-        <div class="tree-machine-header" onclick="toggleTree('${id}')">
+      <div class="tree-machine" data-setid="${s.id}">
+        <div class="tree-machine-header" onclick="toggleTree('${setId}')">
           <div class="tree-machine-name">
             <span class="tree-connector">├──</span>
-            <span>${setLabel}</span>
-            <span style="color:var(--text-dim);font-size:0.8rem;margin-left:0.5rem">${displayName}</span>
+            <span style="color:var(--accent)">${s.set_no || s.id}</span>
+            <span style="color:var(--text-dim);font-size:0.8rem;margin-left:0.5rem">${s.machine_type || ""}</span>
           </div>
-          <span class="tree-toggle" id="toggle-${id}">▶ expand</span>
+          <div style="display:flex;align-items:center;gap:0.75rem">
+            <span style="font-family:var(--mono);font-size:0.65rem;color:var(--text-xdim)">${partList.length} part${partList.length !== 1 ? "s" : ""}</span>
+            <span class="tree-toggle" id="toggle-${setId}">▶ expand</span>
+          </div>
         </div>
 
-        <div class="tree-attrs" id="${id}">
-          ${buildAttr("Type", m.type, i === machines.length - 1 ? false : true)}
-          ${buildAttr("Article No.", m.article_no)}
-          ${buildAttr("S/N", m.serial_no)}
-          ${buildAttr("Power", m.power, false)}
+        <div class="tree-attrs" id="${setId}">`;
 
-          <div class="tree-actions">
-            ${onEdit   ? `<button class="btn-edit"   onclick="handleEdit('${m.id}')">EDIT</button>` : ""}
-            ${onDelete ? `<button class="btn-delete" onclick="handleDelete('${m.id}', this)">DELETE</button>` : ""}
-          </div>
+    if (partList.length === 0) {
+      html += `<div style="padding:0.5rem 1.25rem 0.75rem 2.5rem;font-family:var(--mono);font-size:0.78rem;color:var(--text-xdim)">No parts yet.</div>`;
+    } else {
+      partList.forEach((p, i) => {
+        const isLast = i === partList.length - 1;
+        const pid = `part-${s.id}-${p.id}`;
+        html += `
+          <div class="tree-machine" id="${pid}" style="border-left:none;margin-left:2rem">
+            <div class="tree-machine-header" onclick="toggleTree('${pid}')">
+              <div class="tree-machine-name">
+                <span class="tree-connector" style="color:var(--text-xdim)">${isLast ? "└──" : "├──"}</span>
+                <span style="color:var(--accent2)">Part ${i + 1}</span>
+                <span style="color:var(--text-dim);font-size:0.78rem;margin-left:0.5rem">${p.type || "—"} - ${p.serial_no || "—"}</span>
+              </div>
+              <span class="tree-toggle" id="toggle-${pid}">▶</span>
+            </div>
+            <div class="tree-attrs" id="${pid}">
+              ${buildAttr("Type", p.type)}
+              ${buildAttr("Article No.", p.article_no)}
+              ${buildAttr("S/N", p.serial_no)}
+              ${buildAttr("Power", p.power, false)}
+              <div class="tree-actions">
+                ${onEdit   ? `<button class="btn-edit" onclick="handleEditPart('${s.id}','${p.id}')">EDIT</button>` : ""}
+                ${onDelete ? `<button class="btn-delete" onclick="handleDeletePart('${s.id}','${p.id}',this)">DELETE</button>` : ""}
+              </div>
+            </div>
+          </div>`;
+      });
+    }
+
+    html += `
+          ${onDelete ? `<div style="padding:0.5rem 1.25rem 0.75rem 2.5rem"><button class="btn-delete" style="font-size:0.65rem" onclick="handleDeleteSet('${s.id}',this)">DELETE SET</button></div>` : ""}
         </div>
       </div>`;
   });
 
+  html += `</div>`;
   container.innerHTML = html;
 }
 
 function buildAttr(key, value, notLast = true) {
   const branch = notLast ? "├──" : "└──";
-  return `
-    <div class="tree-attr-row">
-      <div class="attr-line">
-        <span class="attr-branch">${branch}</span>
-        <span class="attr-key">${key}</span>
-        <span class="attr-val">${value || "—"}</span>
-      </div>
-    </div>`;
+  return `<div class="tree-attr-row"><div class="attr-line">
+    <span class="attr-branch">${branch}</span>
+    <span class="attr-key">${key}</span>
+    <span class="attr-val">${value || "—"}</span>
+  </div></div>`;
 }
 
 function toggleTree(id) {
@@ -81,59 +94,39 @@ function toggleTree(id) {
   toggle.classList.toggle("open", isOpen);
 }
 
-// ── Global handlers (called from inline onclick) ──────────────
-
-async function handleDelete(id, btn) {
-  if (!confirm("ลบ Machine นี้ใช่ไหม?")) return;
+async function handleDeleteSet(setId, btn) {
+  if (!confirm("ลบ Machine Set นี้และ Parts ทั้งหมดใช่ไหม?")) return;
   btn.disabled = true;
-  btn.textContent = "...";
   try {
-    await Api.deleteMachine(id);
-    const row = btn.closest(".tree-machine");
-    row.style.opacity = "0";
-    row.style.transition = "opacity 0.3s";
+    await Api.deleteSet(setId);
+    const row = btn.closest(".tree-machine[data-setid]");
+    row.style.opacity = "0"; row.style.transition = "opacity 0.3s";
     setTimeout(() => row.remove(), 300);
-  } catch (e) {
-    alert("Error: " + e.message);
-    btn.disabled = false;
-    btn.textContent = "DELETE";
-  }
+  } catch (e) { alert("Error: " + e.message); btn.disabled = false; }
 }
 
-async function handleEdit(id) {
-  // ดึงข้อมูลปัจจุบัน
-  let machine;
+async function handleDeletePart(setId, partId, btn) {
+  if (!confirm("ลบ Part นี้ใช่ไหม?")) return;
+  btn.disabled = true;
   try {
-    const res = await fetch(`http://localhost:8000/machines/${id}`);
-    machine = await res.json();
-  } catch {
-    alert("Cannot load machine data");
-    return;
-  }
+    await Api.deletePart(setId, partId);
+    const row = document.getElementById(`part-${setId}-${partId}`);
+    row.style.opacity = "0"; row.style.transition = "opacity 0.3s";
+    setTimeout(() => row.remove(), 300);
+  } catch (e) { alert("Error: " + e.message); btn.disabled = false; }
+}
 
-  // สร้าง Modal
+async function handleEditPart(setId, partId) {
   const overlay = document.createElement("div");
   overlay.className = "modal-overlay";
   overlay.innerHTML = `
     <div class="modal">
-      <div class="modal-title">Edit Machine</div>
+      <div class="modal-title">Edit Part</div>
       <div class="modal-grid">
-        <div class="field-group">
-          <label class="field-label">Type</label>
-          <input class="field-input" id="edit-type" value="${machine.type || ""}">
-        </div>
-        <div class="field-group">
-          <label class="field-label">Article No.</label>
-          <input class="field-input" id="edit-article" value="${machine.article_no || ""}">
-        </div>
-        <div class="field-group">
-          <label class="field-label">S/N</label>
-          <input class="field-input" id="edit-sn" value="${machine.serial_no || ""}">
-        </div>
-        <div class="field-group">
-          <label class="field-label">Power</label>
-          <input class="field-input" id="edit-power" value="${machine.power || ""}">
-        </div>
+        <div class="field-group"><label class="field-label">Type</label><input class="field-input" id="ep-type"></div>
+        <div class="field-group"><label class="field-label">Article No.</label><input class="field-input" id="ep-article"></div>
+        <div class="field-group"><label class="field-label">S/N</label><input class="field-input" id="ep-sn"></div>
+        <div class="field-group"><label class="field-label">Power</label><input class="field-input" id="ep-power"></div>
       </div>
       <div class="modal-actions">
         <button class="btn-secondary" id="cancelEdit">CANCEL</button>
@@ -141,32 +134,25 @@ async function handleEdit(id) {
       </div>
       <div class="modal-status" id="editStatus"></div>
     </div>`;
-
   document.body.appendChild(overlay);
-
   overlay.querySelector("#cancelEdit").onclick = () => overlay.remove();
-
   overlay.querySelector("#saveEdit").onclick = async () => {
     const btn = overlay.querySelector("#saveEdit");
     const status = overlay.querySelector("#editStatus");
     btn.disabled = true; btn.textContent = "Saving...";
     try {
-      await Api.updateMachine(id, {
-        type:       overlay.querySelector("#edit-type").value,
-        article_no: overlay.querySelector("#edit-article").value,
-        serial_no:  overlay.querySelector("#edit-sn").value,
-        power:      overlay.querySelector("#edit-power").value,
+      await Api.updatePart(setId, partId, {
+        type: overlay.querySelector("#ep-type").value,
+        article_no: overlay.querySelector("#ep-article").value,
+        serial_no: overlay.querySelector("#ep-sn").value,
+        power: overlay.querySelector("#ep-power").value,
       });
-      status.className = "modal-status success";
-      status.textContent = "✓ Saved!";
+      status.className = "modal-status success"; status.textContent = "✓ Saved!";
       setTimeout(() => { overlay.remove(); location.reload(); }, 800);
     } catch (e) {
-      status.className = "modal-status error";
-      status.textContent = "Error: " + e.message;
+      status.className = "modal-status error"; status.textContent = "Error: " + e.message;
       btn.disabled = false; btn.textContent = "SAVE";
     }
   };
-
-  // Close on backdrop click
   overlay.addEventListener("click", (e) => { if (e.target === overlay) overlay.remove(); });
 }

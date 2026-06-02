@@ -482,3 +482,33 @@ body {
   .form-grid { grid-template-columns: 1fr; }
   .modal-grid { grid-template-columns: 1fr; }
 }
+
+/* ── STEP LABEL ───────────────────────────────── */
+.step-label {
+  font-family: var(--mono);
+  font-size: 0.65rem; font-weight: 500; letter-spacing: 0.18em;
+  color: var(--text-xdim);
+  margin-bottom: 1.25rem;
+}
+
+.set-badge {
+  display: flex; align-items: center; gap: 0.75rem;
+  padding: 0.6rem 1rem;
+  background: rgba(232,255,71,0.05);
+  border: 1px solid rgba(232,255,71,0.15);
+  border-radius: var(--radius);
+  margin-bottom: 1.5rem;
+}
+
+/* ── PART FORM ────────────────────────────────── */
+.part-form {
+  border-top: 1px solid var(--border);
+  padding-top: 1.25rem;
+}
+
+.part-form-title {
+  font-family: var(--mono);
+  font-size: 0.8rem; font-weight: 500;
+  color: var(--accent);
+  margin-bottom: 1rem;
+}

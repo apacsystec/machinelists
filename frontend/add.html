@@ -9,13 +9,8 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-
-  <!-- NAV -->
   <nav class="nav">
-    <div class="nav-brand">
-      <span class="nav-icon">⬡</span>
-      <span>MACHINE REGISTRY</span>
-    </div>
+    <div class="nav-brand"><span class="nav-icon">⬡</span><span>MACHINE REGISTRY</span></div>
     <div class="nav-links">
       <a href="index.html" class="nav-link">SEARCH</a>
       <a href="add.html" class="nav-link active">ADD MACHINE</a>
@@ -24,72 +19,72 @@
 
   <section class="form-section">
     <div class="form-header">
-      <div class="form-label">MACHINE SET</div>
-      <h2 class="form-title">Add New Machine</h2>
-      <p class="form-sub">กรอกข้อมูลชุดเครื่องจักรใหม่</p>
+      <div class="form-label">NEW MACHINE SET</div>
+      <h2 class="form-title">Add Machine Set</h2>
+      <p class="form-sub">กรอก Machine Type แล้วเพิ่ม Parts ได้เรื่อยๆ</p>
     </div>
 
-    <!-- PREVIEW BADGE -->
-    <div class="preview-box" id="previewBox">
-      <span class="preview-label">PREVIEW</span>
-      <span class="preview-name" id="previewName">— —</span>
-    </div>
-
-    <!-- FORM -->
-    <div class="card form-card">
-      <div class="form-grid">
-
-        <div class="field-group">
-          <label class="field-label" for="type">
-            <span class="field-num">01</span> Type
-          </label>
-          <input type="text" id="type" class="field-input" placeholder="e.g. WAVE 224" />
-        </div>
-
-        <div class="field-group">
-          <label class="field-label" for="articleNo">
-            <span class="field-num">02</span> Article No.
-          </label>
-          <input type="text" id="articleNo" class="field-input" placeholder="e.g. ART-00123" />
-        </div>
-
-        <div class="field-group">
-          <label class="field-label" for="serialNo">
-            <span class="field-num">03</span> S/N
-          </label>
-          <input type="text" id="serialNo" class="field-input" placeholder="e.g. A08581" />
-        </div>
-
-        <div class="field-group">
-          <label class="field-label" for="power">
-            <span class="field-num">04</span> Power
-          </label>
-          <input type="text" id="power" class="field-input" placeholder="e.g. 220V / 50Hz" />
-        </div>
-
+    <!-- STEP 1: Machine Type -->
+    <div class="card form-card" id="step1Card">
+      <div class="step-label">STEP 1 — MACHINE TYPE</div>
+      <div class="field-group" style="margin-bottom:1.5rem">
+        <label class="field-label" for="machineType">
+          <span class="field-num">01</span> Machine Type
+        </label>
+        <input type="text" id="machineType" class="field-input" placeholder="e.g. WAVE 224"/>
       </div>
-
       <div class="form-actions">
-        <button class="btn-secondary" id="resetBtn" type="button">CLEAR</button>
-        <button class="btn-primary" id="submitBtn" type="button">
-          <span id="submitLabel">ADD MACHINE</span>
-        </button>
+        <button class="btn-primary" id="createSetBtn">CREATE SET →</button>
       </div>
-
-      <!-- STATUS MESSAGE -->
-      <div class="status-msg" id="statusMsg"></div>
+      <div class="status-msg" id="step1Status"></div>
     </div>
 
-    <!-- RECENT ADDITIONS -->
-    <div class="recent-section">
+    <!-- STEP 2: Add Parts (hidden until set created) -->
+    <div class="card form-card" id="step2Card" style="display:none; margin-top:1.5rem">
+      <div class="step-label" id="setLabel">SET-001 — PARTS</div>
+      <div class="set-badge" id="setBadge"></div>
+
+      <!-- Parts list -->
+      <div id="partsList" style="margin-bottom:1.5rem"></div>
+
+      <!-- Add part form -->
+      <div class="part-form" id="partForm">
+        <div class="part-form-title">+ Add Part</div>
+        <div class="form-grid">
+          <div class="field-group">
+            <label class="field-label"><span class="field-num">01</span> Type</label>
+            <input type="text" id="pType" class="field-input" placeholder="e.g. WAVE 224"/>
+          </div>
+          <div class="field-group">
+            <label class="field-label"><span class="field-num">02</span> Article No.</label>
+            <input type="text" id="pArticle" class="field-input" placeholder="e.g. ART-001"/>
+          </div>
+          <div class="field-group">
+            <label class="field-label"><span class="field-num">03</span> S/N</label>
+            <input type="text" id="pSN" class="field-input" placeholder="e.g. A08581"/>
+          </div>
+          <div class="field-group">
+            <label class="field-label"><span class="field-num">04</span> Power</label>
+            <input type="text" id="pPower" class="field-input" placeholder="e.g. 220V/50Hz"/>
+          </div>
+        </div>
+        <div class="form-actions" style="margin-top:1rem">
+          <button class="btn-secondary" id="doneBtn">DONE ✓</button>
+          <button class="btn-primary" id="addPartBtn">ADD PART</button>
+        </div>
+        <div class="status-msg" id="partStatus"></div>
+      </div>
+    </div>
+
+    <!-- Recent sets -->
+    <div class="recent-section" style="margin-top:2.5rem">
       <div class="section-header">
-        <span class="section-label">RECENTLY ADDED</span>
+        <span class="section-label">RECENT MACHINE SETS</span>
       </div>
       <div id="recentList" class="recent-list">
         <div class="loading-row"><span class="spinner"></span> Loading...</div>
       </div>
     </div>
-
   </section>
 
   <script src="api.js"></script>
