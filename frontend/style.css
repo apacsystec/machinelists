@@ -512,3 +512,31 @@ body {
   color: var(--accent);
   margin-bottom: 1rem;
 }
+
+/* ── SET LIST (Total Machine Sets) ───────────────────────────── */
+.set-list-item {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-bottom: none;
+}
+.set-list-item:first-child { border-radius: 8px 8px 0 0; }
+.set-list-item:last-child  { border-bottom: 1px solid var(--border); border-radius: 0 0 8px 8px; }
+
+.set-list-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0.75rem 1rem;
+}
+
+.set-edit-panel {
+  padding: 0.75rem 1rem 1rem;
+  background: var(--surface2);
+  border-top: 1px solid var(--border);
+  animation: fadeDown 0.18s ease;
+}
+
+.set-part-row {
+  display: flex; align-items: center; gap: 0.5rem;
+  padding: 0.4rem 0;
+  border-bottom: 1px solid var(--border);
+}
+.set-part-row:last-child { border-bottom: none; }
