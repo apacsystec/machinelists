@@ -41,18 +41,19 @@ function renderSets(container, sets, opts = {}) {
     } else {
       partList.forEach((p, i) => {
         const isLast = i === partList.length - 1;
-        const pid = `part-${s.id}-${p.id}`;
+        const pid     = `part-${s.id}-${p.id}`;
+        const pattrId = `pattr-${s.id}-${p.id}`;
         html += `
           <div class="tree-machine" id="${pid}" style="border-left:none;margin-left:2rem">
-            <div class="tree-machine-header" onclick="toggleTree('${pid}')">
+            <div class="tree-machine-header" onclick="toggleTree('${pattrId}')">
               <div class="tree-machine-name">
                 <span class="tree-connector" style="color:var(--text-xdim)">${isLast ? "└──" : "├──"}</span>
                 <span style="color:var(--accent2)">Part ${i + 1}</span>
                 <span style="color:var(--text-dim);font-size:0.78rem;margin-left:0.5rem">${p.type || "—"} - ${p.serial_no || "—"}</span>
               </div>
-              <span class="tree-toggle" id="toggle-${pid}">▶</span>
+              <span class="tree-toggle" id="toggle-${pattrId}">▶</span>
             </div>
-            <div class="tree-attrs" id="${pid}">
+            <div class="tree-attrs" id="${pattrId}">
               ${buildAttr("Type", p.type)}
               ${buildAttr("Article No.", p.article_no)}
               ${buildAttr("S/N", p.serial_no)}
