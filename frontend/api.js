@@ -3,7 +3,7 @@
 // ชี้ไปที่ FastAPI backend
 // ============================================================
 
-const API_BASE = "http://localhost:8000";
+const API_BASE = "https://machinelists.onrender.com";
 
 const Api = {
   async getAllMachines() {
