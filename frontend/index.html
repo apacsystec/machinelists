@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Machine Registry</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- NAV -->
+  <nav class="nav">
+    <div class="nav-brand">
+      <span class="nav-icon">⬡</span>
+      <span>MACHINE REGISTRY</span>
+    </div>
+    <div class="nav-links">
+      <a href="index.html" class="nav-link active">SEARCH</a>
+      <a href="add.html" class="nav-link">ADD MACHINE</a>
+    </div>
+  </nav>
+
+  <!-- HERO SEARCH -->
+  <section class="hero">
+    <div class="hero-label">MACHINE DATABASE</div>
+    <h1 class="hero-title">Find Your<br><em>Machine</em></h1>
+    <p class="hero-sub">Search by Type, Article No., S/N, or Power</p>
+
+    <div class="search-bar">
+      <input
+        type="text"
+        id="searchInput"
+        class="search-input"
+        placeholder="e.g.  WAVE 224  /  A08581  /  220V"
+        autocomplete="off"
+      />
+      <button class="search-btn" id="searchBtn">
+        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+          <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+        </svg>
+        SEARCH
+      </button>
+    </div>
+
+    <div class="search-hint" id="searchHint">กด Enter หรือคลิก SEARCH เพื่อค้นหา</div>
+  </section>
+
+  <!-- RESULTS -->
+  <section class="results-section" id="resultsSection" style="display:none">
+    <div class="results-header">
+      <div class="results-title" id="resultsTitle">Results</div>
+      <div class="results-count" id="resultsCount"></div>
+    </div>
+
+    <!-- TREE VIEW -->
+    <div class="tree-container" id="treeContainer"></div>
+  </section>
+
+  <!-- EMPTY STATE -->
+  <div class="empty-state" id="emptyState" style="display:none">
+    <div class="empty-icon">◎</div>
+    <div class="empty-text">No machines found</div>
+    <div class="empty-sub">ลองค้นหาด้วย keyword อื่น</div>
+  </div>
+
+  <!-- ALL MACHINES (initial load) -->
+  <section class="all-section" id="allSection">
+    <div class="section-header">
+      <span class="section-label">ALL MACHINES</span>
+      <span class="section-count" id="allCount">Loading...</span>
+    </div>
+    <div class="tree-container" id="allContainer">
+      <div class="loading-row">
+        <span class="spinner"></span> Loading machines...
+      </div>
+    </div>
+  </section>
+
+  <script src="api.js"></script>
+  <script src="tree.js"></script>
+  <script src="search.js"></script>
+</body>
+</html>
