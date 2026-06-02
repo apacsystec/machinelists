@@ -1,5 +1,8 @@
-fastapi
-uvicorn[standard]
-firebase-admin
-python-dotenv
-pydantic
+fastapi==0.111.0
+uvicorn==0.29.0
+firebase-admin==6.5.0
+python-dotenv==1.0.1
+pydantic==2.7.1
+pylibdmtx
+Pillow
+setuptools
