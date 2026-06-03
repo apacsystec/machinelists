@@ -203,7 +203,7 @@ async def search(query: str):
             results.append(s)
         elif matched_parts:
             s = set_to_dict(set_doc)
-            s["matched_parts"] = matched_parts
+            s["matched_parts"] = all_parts
             results.append(s)
     return results
 
@@ -225,18 +225,18 @@ from fastapi import File, UploadFile
 @app.post("/decode-datamatrix")
 async def decode_datamatrix(file: UploadFile = File(...)):
     try:
-        import zxingcpp
+        from pylibdmtx.pylibdmtx import decode as dmtx_decode
         from PIL import Image
         import io
 
         contents = await file.read()
-        img = Image.open(io.BytesIO(contents))
-        results = zxingcpp.read_barcodes(img)
+        img = Image.open(io.BytesIO(contents)).convert("RGB")
 
+        results = dmtx_decode(img)
         if not results:
             raise HTTPException(status_code=422, detail="ไม่พบ DataMatrix ในรูปภาพ")
 
-        raw = results[0].text.strip()
+        raw = results[0].data.decode("utf-8").strip()
         sn  = raw.split()[0] if raw else ""
         return {"raw": raw, "serial_no": sn}
 
@@ -244,15 +244,3 @@ async def decode_datamatrix(file: UploadFile = File(...)):
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-# updated
-
-
-# DEBUG endpoint
-@app.get("/debug-dmtx")
-async def debug_dmtx():
-    import subprocess
-    try:
-        from pylibdmtx.pylibdmtx import decode
-        return {"pylibdmtx": "OK"}
-    except Exception as e:
-        return {"pylibdmtx": str(e)}
