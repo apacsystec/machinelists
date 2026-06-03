@@ -1,4 +1,3 @@
-// search.js v3 — ไม่แสดง All Machine Sets
 const searchInput     = document.getElementById("searchInput");
 const searchBtn       = document.getElementById("searchBtn");
 const resultsSection  = document.getElementById("resultsSection");
@@ -9,7 +8,6 @@ const emptyState      = document.getElementById("emptyState");
 const allSection      = document.getElementById("allSection");
 const searchHint      = document.getElementById("searchHint");
 
-// ซ่อน All Machine Sets section
 if (allSection) allSection.style.display = "none";
 
 async function doSearch() {
@@ -29,10 +27,7 @@ async function doSearch() {
     if (results.length > 0) {
       resultsTitle.textContent = `Results for "${q}"`;
       resultsCount.textContent = `${results.length} set${results.length !== 1 ? "s" : ""} matched`;
-      renderSets(resultsContainer, results, {
-        rootLabel: `Machine set No. — "${q}"`,
-        onEdit: true, onDelete: true,
-      });
+      renderSets(resultsContainer, results, { rootLabel: `Machine set No. — "${q}"`, onEdit: true, onDelete: true });
       resultsSection.scrollIntoView({ behavior: "smooth" });
     }
     searchHint.textContent = `Found ${results.length} result${results.length !== 1 ? "s" : ""} for "${q}"`;
