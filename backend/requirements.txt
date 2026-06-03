@@ -3,7 +3,7 @@ uvicorn[standard]
 firebase-admin
 python-dotenv
 pydantic
-pylibdmtx
+zxing-cpp
 Pillow
 setuptools
 python-multipart
