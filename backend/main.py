@@ -246,3 +246,13 @@ async def decode_datamatrix(file: UploadFile = File(...)):
         raise HTTPException(status_code=500, detail=str(e))
 # updated
 
+
+# DEBUG endpoint
+@app.get("/debug-dmtx")
+async def debug_dmtx():
+    import subprocess
+    try:
+        from pylibdmtx.pylibdmtx import decode
+        return {"pylibdmtx": "OK"}
+    except Exception as e:
+        return {"pylibdmtx": str(e)}
