@@ -244,3 +244,4 @@ async def decode_datamatrix(file: UploadFile = File(...)):
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+# updated
