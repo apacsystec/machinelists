@@ -12,7 +12,6 @@ const scanModal     = document.getElementById("scanModal");
 const closeScan     = document.getElementById("closeScan");
 const scanVideo     = document.getElementById("scanVideo");
 const scanStatus    = document.getElementById("scanStatus");
-const searchInput   = document.getElementById("searchInput");
 
 let mediaStream = null;
 let scanning    = false;
