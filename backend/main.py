@@ -256,4 +256,3 @@ async def debug_dmtx():
         return {"pylibdmtx": "OK"}
     except Exception as e:
         return {"pylibdmtx": str(e)}
-Wed Jun  3 13:45:04 +07 2026
