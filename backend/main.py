@@ -225,18 +225,18 @@ from fastapi import File, UploadFile
 @app.post("/decode-datamatrix")
 async def decode_datamatrix(file: UploadFile = File(...)):
     try:
-        from pylibdmtx.pylibdmtx import decode as dmtx_decode
+        import zxingcpp
         from PIL import Image
         import io
 
         contents = await file.read()
-        img = Image.open(io.BytesIO(contents)).convert("RGB")
+        img = Image.open(io.BytesIO(contents))
+        results = zxingcpp.read_barcodes(img)
 
-        results = dmtx_decode(img)
         if not results:
             raise HTTPException(status_code=422, detail="ไม่พบ DataMatrix ในรูปภาพ")
 
-        raw = results[0].data.decode("utf-8").strip()
+        raw = results[0].text.strip()
         sn  = raw.split()[0] if raw else ""
         return {"raw": raw, "serial_no": sn}
 
